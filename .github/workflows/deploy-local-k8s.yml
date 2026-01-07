@@ -1,0 +1,36 @@
+name: Deploy to Local Kubernetes (self-hosted)
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "deployment.yml"
+      - "service.yml"
+      - ".github/workflows/deploy-local-k8s.yml"
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify kubectl access
+        run: |
+          kubectl version --client=true
+          kubectl config current-context
+          kubectl get nodes -o wide
+
+      - name: Ensure namespace exists
+        run: |
+          kubectl create namespace weather --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Deploy manifests
+        run: |
+          kubectl apply -f deployment.yml
+          kubectl apply -f service.yml
+
+      - name: Show status
+        run: |
+          kubectl -n weather get deploy,svc,pods -o wide
